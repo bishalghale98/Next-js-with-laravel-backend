@@ -78,10 +78,43 @@ export const forgetPassword = createAsyncThunk(
   "auth/forgetPassword",
   async ({ email }, { rejectWithValue }) => {
     try {
-      const res = await api.post("/api/auth/forgot-password", { email });
+      await api.post("/api/auth/forgot-password", { email });
     } catch (error) {
       console.log("Error : ", error.message);
       toast.error("Something went wrong");
+    }
+  }
+);
+
+// Reset password
+export const resetPassword = createAsyncThunk(
+  "auth/resetPassword",
+  async ({ token, password, password_confirmation }, { rejectWithValue }) => {
+    try {
+      const res = await api.post("/api/auth/reset-password", {
+        token,
+        password,
+        password_confirmation,
+      });
+
+      toast.success("Password reset successfully!");
+      return res.data.message;
+    } catch (error) {
+      console.log("Error : ", error);
+    }
+  }
+);
+
+export const verificationNotification = createAsyncThunk(
+  "auth/verificationNotification",
+  async ({ email }, { rejectWithValue }) => {
+    try {
+      const res = await api.post("/api/auth/email/verification-notification", {
+        email,
+      });
+      return res.data.message;
+    } catch (error) {
+      console.log("Error : ", error);
     }
   }
 );
@@ -94,6 +127,7 @@ const authSlice = createSlice({
     isAuthenticated: false,
     loading: true,
     error: null,
+    message: null,
   },
   reducers: {
     resetAuthState: (state) => {
@@ -147,6 +181,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
 
+      // Register User
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
       })
@@ -160,6 +195,7 @@ const authSlice = createSlice({
         state.error = action.payload;
       })
 
+      // Forget Password
       .addCase(forgetPassword.pending, (state, action) => {
         state.loading = true;
       })
@@ -169,6 +205,32 @@ const authSlice = createSlice({
       .addCase(forgetPassword.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      // reset password
+      .addCase(resetPassword.pending, (state, action) => {
+        state.loading = true;
+      })
+      .addCase(resetPassword.fulfilled, (state, action) => {
+        state.loading = false;
+      })
+      .addCase(resetPassword.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // verification send
+      .addCase(verificationNotification.pending, (state, action) => {
+        state.loading = true;
+      })
+      .addCase(verificationNotification.fulfilled, (state, action) => {
+        state.loading = false;
+        state.message = "Verification email sent! Please check your inbox.";
+      })
+      .addCase(verificationNotification.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.message = "Failed to send verification email. Please try again.";
       });
   },
 });

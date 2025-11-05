@@ -31,7 +31,9 @@ const AppLayout = ({ children, allowedRoles = [] }) => {
     );
   }
 
-  return <>{children}</>;
+  return <>
+  
+  {children}</>;
 };
 
 export default AppLayout;
