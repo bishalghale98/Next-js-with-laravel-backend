@@ -48,6 +48,44 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
+// Register user
+export const registerUser = createAsyncThunk(
+  "auth/registerUser",
+  async (
+    { name, email, password, password_confirmation },
+    { rejectWithValue }
+  ) => {
+    try {
+      const res = await api.post("/api/auth/register", {
+        name,
+        email,
+        password,
+        password_confirmation,
+      });
+      toast.success(
+        `Account created successfully! Welcome, ${res.data.user.name}`
+      );
+      return res.data.user;
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Registration failed");
+      return rejectWithValue(err.response?.data || err);
+    }
+  }
+);
+
+// Forgot Password
+export const forgetPassword = createAsyncThunk(
+  "auth/forgetPassword",
+  async ({ email }, { rejectWithValue }) => {
+    try {
+      const res = await api.post("/api/auth/forgot-password", { email });
+    } catch (error) {
+      console.log("Error : ", error.message);
+      toast.error("Something went wrong");
+    }
+  }
+);
+
 // ========== Slice ==========
 const authSlice = createSlice({
   name: "auth",
@@ -106,6 +144,30 @@ const authSlice = createSlice({
         state.loading = false;
       })
       .addCase(logoutUser.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+
+      .addCase(registerUser.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(registerUser.fulfilled, (state, action) => {
+        state.user = action.payload;
+        state.loading = false;
+      })
+      .addCase(registerUser.rejected, (state, action) => {
+        state.user = null;
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(forgetPassword.pending, (state, action) => {
+        state.loading = true;
+      })
+      .addCase(forgetPassword.fulfilled, (state, action) => {
+        state.loading = false;
+      })
+      .addCase(forgetPassword.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.payload;
       });
   },

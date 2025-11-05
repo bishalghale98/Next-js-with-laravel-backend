@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   EnvelopeIcon,
   EyeIcon,
@@ -9,49 +9,80 @@ import {
   UserIcon,
   CheckCircleIcon,
   XCircleIcon,
+  ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { registerSchema } from "@/zodSchema/authSchema";
+import BackButton from "@/components/common/BackButton";
+import SocialLogin from "@/components/auth/SocialLogin";
+import { useDispatch, useSelector } from "react-redux";
+import { registerUser } from "@/store/slices/authSlice";
+
 
 function RegisterPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    password_confirmation: "",
-  });
+  const dispatch = useDispatch();
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const { user, loading, error } = useSelector((state) => state.auth);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    mode: "onChange",
+  });
+
+  const onSubmit = async (data) => {
+    setIsSubmitting(true);
+    try {
+      await dispatch(registerUser(data)).unwrap(); // unwrap to catch errors
+      router.push("/login"); // redirect after successful registration
+    } catch (err) {
+      console.error("Registration failed:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Handle registration logic here
-    console.log("Registration attempt:", formData);
-  };
-
-  const passwordsMatch = formData.password === formData.password_confirmation;
-  const isPasswordValid = formData.password.length >= 6;
+  useEffect(() => {
+    // Redirect if already logged in
+    if (user) {
+      router.push("/"); // or dashboard route
+    }
+  }, [user, router]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        {/* Back Button */}
+        <div className="mb-6">
+          <BackButton
+            onClick={() => router.back()}
+            text="Back"
+            className="text-blue-600 hover:text-blue-800"
+            iconClassName="h-5 w-5 mr-2"
+          />
+        </div>
+
         {/* Header */}
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">
             Create Account
           </h2>
-          <p className="text-gray-600">Join us today</p>
+          <p className="text-gray-600 text-base">Join us today</p>
         </div>
 
         {/* Registration Card */}
-        <div className="mt-8 bg-white py-8 px-6 shadow-lg rounded-2xl sm:px-10 border border-gray-100">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white py-8 px-6 shadow-sm rounded-lg sm:px-10 border-0">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* Name Field */}
             <div>
               <label
@@ -61,20 +92,23 @@ function RegisterPage() {
                 Full Name
               </label>
               <div className="relative">
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full px-4 text-gray-700 py-3 pl-11 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400"
-                  placeholder="Enter your full name"
-                  required
-                />
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                   <UserIcon className="h-5 w-5 text-gray-400" />
                 </div>
+                <input
+                  id="name"
+                  type="text"
+                  {...register("name")}
+                  className="w-full px-4 py-3 pl-10 pr-4 text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-500 hover:border-gray-400"
+                  placeholder="Enter your full name"
+                />
               </div>
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <XCircleIcon className="h-4 w-4 mr-1" />
+                  {errors.name.message}
+                </p>
+              )}
             </div>
 
             {/* Email Field */}
@@ -86,20 +120,23 @@ function RegisterPage() {
                 Email Address
               </label>
               <div className="relative">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 text-gray-700 pl-11 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400"
-                  placeholder="Enter your email"
-                  required
-                />
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                   <EnvelopeIcon className="h-5 w-5 text-gray-400" />
                 </div>
+                <input
+                  id="email"
+                  type="email"
+                  {...register("email")}
+                  className="w-full px-4 py-3 pl-10 pr-4 text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-500 hover:border-gray-400"
+                  placeholder="Enter your email"
+                />
               </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <XCircleIcon className="h-4 w-4 mr-1" />
+                  {errors.email.message}
+                </p>
+              )}
             </div>
 
             {/* Password Field */}
@@ -111,19 +148,16 @@ function RegisterPage() {
                 Password
               </label>
               <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 text-gray-700 pl-11 pr-11 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400"
-                  placeholder="Enter your password"
-                  required
-                />
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                   <LockClosedIcon className="h-5 w-5 text-gray-400" />
                 </div>
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  {...register("password")}
+                  className="w-full px-4 py-3 pl-10 pr-12 text-gray-900 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-500 hover:border-gray-400"
+                  placeholder="Enter your password"
+                />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -136,19 +170,14 @@ function RegisterPage() {
                   )}
                 </button>
               </div>
-              {formData.password && (
-                <div
-                  className={`mt-1 text-sm flex items-center ${
-                    isPasswordValid ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {isPasswordValid ? (
-                    <CheckCircleIcon className="h-4 w-4 mr-1" />
-                  ) : (
-                    <XCircleIcon className="h-4 w-4 mr-1" />
-                  )}
-                  Password must be at least 6 characters
-                </div>
+
+              {/* Password Requirements */}
+
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <XCircleIcon className="h-4 w-4 mr-1" />
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
@@ -161,25 +190,16 @@ function RegisterPage() {
                 Confirm Password
               </label>
               <div className="relative">
-                <input
-                  id="password_confirmation"
-                  name="password_confirmation"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={formData.password_confirmation}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 pl-11 pr-11 text-gray-700 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400 ${
-                    formData.password_confirmation
-                      ? passwordsMatch
-                        ? "border-green-300"
-                        : "border-red-300"
-                      : "border-gray-300"
-                  }`}
-                  placeholder="Confirm your password"
-                  required
-                />
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                   <LockClosedIcon className="h-5 w-5 text-gray-400" />
                 </div>
+                <input
+                  id="password_confirmation"
+                  type={showConfirmPassword ? "text" : "password"}
+                  {...register("password_confirmation")}
+                  className={`w-full px-4 py-3 pl-10 pr-12 text-gray-900 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-500 hover:border-gray-400 border-gray-300}`}
+                  placeholder="Confirm your password"
+                />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -192,116 +212,68 @@ function RegisterPage() {
                   )}
                 </button>
               </div>
-              {formData.password_confirmation && (
-                <div
-                  className={`mt-1 text-sm flex items-center ${
-                    passwordsMatch ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {passwordsMatch ? (
-                    <CheckCircleIcon className="h-4 w-4 mr-1" />
-                  ) : (
-                    <XCircleIcon className="h-4 w-4 mr-1" />
-                  )}
-                  {passwordsMatch
-                    ? "Passwords match"
-                    : "Passwords do not match"}
-                </div>
+
+              {errors.password_confirmation && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <XCircleIcon className="h-4 w-4 mr-1" />
+                  {errors.password_confirmation.message}
+                </p>
               )}
             </div>
 
             {/* Terms and Conditions */}
-            <div className="flex items-center">
+            <div className="flex items-start space-x-3">
               <input
                 id="terms"
-                name="terms"
                 type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                required
+                {...register("terms")}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1"
               />
-              <label
-                htmlFor="terms"
-                className="ml-2 block text-sm text-gray-700"
-              >
+              <label htmlFor="terms" className="block text-sm text-gray-700">
                 I agree to the{" "}
-                <a href="#" className="text-blue-600 hover:text-blue-500">
+                <a
+                  href="#"
+                  className="text-blue-600 hover:text-blue-500 font-medium"
+                >
                   Terms and Conditions
+                </a>{" "}
+                and{" "}
+                <a
+                  href="#"
+                  className="text-blue-600 hover:text-blue-500 font-medium"
+                >
+                  Privacy Policy
                 </a>
               </label>
             </div>
+            {errors.terms && (
+              <p className="text-sm text-red-600 flex items-center">
+                <XCircleIcon className="h-4 w-4 mr-1" />
+                {errors.terms.message}
+              </p>
+            )}
 
             {/* Submit Button */}
             <div>
               <button
                 type="submit"
-                disabled={
-                  !passwordsMatch ||
-                  !isPasswordValid ||
-                  !formData.name ||
-                  !formData.email
-                }
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                disabled={isSubmitting}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Account
+                {isSubmitting ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                    Creating Account...
+                  </div>
+                ) : (
+                  "Create Account"
+                )}
               </button>
             </div>
           </form>
 
           {/* Divider */}
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-
-            {/* Social Login */}
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="w-full inline-flex justify-center items-center py-2 px-4 border border-gray-300 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200"
-              >
-                <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                </svg>
-                Google
-              </button>
-
-              <button
-                type="button"
-                className="w-full inline-flex justify-center items-center py-2 px-4 border border-gray-300 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200"
-              >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.091.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.268 2.75 1.026A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.026 2.747-1.026.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-                </svg>
-                GitHub
-              </button>
-            </div>
-          </div>
+          <SocialLogin />
 
           {/* Login Link */}
           <div className="mt-6 text-center">
